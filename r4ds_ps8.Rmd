@@ -1,0 +1,311 @@
+---
+title: "r4ds 8"
+author: "Jihye"
+date: "3/10/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dbplyr)
+library(tidyverse)
+library(stringr)
+library(statar)
+library(microbenchmark)
+library(lubridate)
+library(jsonlite)
+library(ggmap)
+library(maps)
+library(RMySQL)
+```
+#1 Chapter 21
+
+1. 
+```{r}
+# mean
+mean <- vector("double", ncol(mtcars))
+for (i in seq_along(mtcars)) {
+  mean[[i]] <- mean(mtcars[[i]])
+}
+
+
+#type
+type <- vector("character", ncol(nycflights13::flights))
+for (i in seq_along(nycflights13::flights)) {
+  type[[i]] <- typeof(nycflights13::flights[[i]])
+}
+
+
+#unique value
+unique_value <- vector("double", ncol(iris))
+for (i in seq_along(iris)) {
+  unique_value[[i]] <- n_distinct(iris[[i]])
+}
+
+
+#random normal
+vector <- c(-10, 0, 10, 100)
+random_norm <- data.frame(matrix(NA, ncol = 4, nrow = 10))
+for (i in seq_along(vector)) {
+  random_norm[[i]] <- rnorm(10, mean = vector[[i]])
+}
+
+mean
+type
+unique_value
+random_norm
+```    
+
+
+2.
+```{r}
+
+out <- ""
+for (x in letters) {
+  out <- stringr::str_c(out, x)
+}
+out
+
+# an existing function
+str_c(letters, collapse = "")
+
+
+x <- sample(100)
+sd <- 0
+for (i in seq_along(x)) {
+  sd <- sd + (x[i] - mean(x)) ^ 2
+}
+sd <- sqrt(sd / (length(x) - 1))
+
+# an existing function
+sd(x)
+
+
+x <- runif(100)
+out <- vector("numeric", length(x))
+out[1] <- x[1]
+for (i in 2:length(x)) {
+  out[i] <- out[i - 1] + x[i]
+}
+
+
+# an existing function
+cumsum(100)
+```     
+
+
+3.
+```{r}
+number_vector <- c("ten", "nine", "eight", "seven", "six", "five",
+             "four", "three", "two", "one")
+for (i in number_vector) {
+  print(c("There were",i,"in the bed"))
+  print("and the little one said")
+  print("'Roll over, roll over'")
+  print("So they all rolled over and one fell out")
+}
+```
+
+4.
+```{r}
+
+# from the pset
+
+#output <- vector("integer", 0) 
+#for (i in seq_along(x)) {
+#  output <- c(output, lengths(x[[i]]))
+#}
+#output
+
+
+#sample test
+f1 <- function (n) {
+    list <- list()
+    for(i in 1:n) {
+        list <- append(list, i)
+    }
+    return(list)
+}
+
+f2 <- function (n) {
+    list <- list()
+    for(i in 1:n) {
+        list[[length(list) + 1]] <- i
+    }
+    return(list)
+}
+microbenchmark(f1(30000), times = 3)
+microbenchmark(f1(30000), times = 3)
+```
+secone one is faster by 0.14 second.    
+
+5.
+```{r}
+files <- dir("data/", pattern = "\\.csv$", full.names = TRUE)
+df <- vector("character", length(files))
+for (file in seq_along(files)) {
+  df[[i]] <- read_csv(files[[i]])
+}
+df <- bind_rows(df)
+```
+
+6.
+```{r}
+show_mean <- function(df) {
+  for (i in seq_along(df)) {
+    if (is.numeric(df[[i]])) {
+      cat(str_c(names(df[i]), round(mean(df[[i]]), 2), sep = " - "),
+          "\n")
+    }
+  }
+}
+
+show_mean(iris)
+```
+
+7. The code lists two variables, disp and am. 
+disp is the value multiplied by 0.0163871 and 
+am is a factor variable with the value either auto ot manual.  
+
+```{r}
+trans <- list( 
+  disp = function(x) x * 0.0163871,
+  am = function(x) {
+    factor(x, labels = c("auto", "manual"))
+  }
+)
+for (var in names(trans)) {
+  mtcars[[var]] <- trans[[var]](mtcars[[var]])
+}
+```
+
+
+8.
+```{r}
+col_summary <- function(df, fun) {
+  out <- vector("double", length(df))
+  for (i in seq_along(df)) {
+    out[i] <- fun(df[[i]])
+  }
+  out
+}
+```
+
+9.
+```{r }
+# the mean of every column in mtcars.
+#map_dbl(mtcars, mean)
+
+#the type of each column in nycflights13::flights.
+map_chr(nycflights13::flights, typeof)
+
+#the number of unique values in each column of iris.
+map_int(iris, n_distinct)
+
+#10 random normals for each of ?? = ???10, 0, 10, and 100.
+vector <- c(-10, 0, 10, 100)
+#map(vector, rnorm, n = 10)
+
+```
+
+10.
+```{r}
+map_lgl(nycflights13::flights, is.factor)
+```
+
+None of the columns in the flights dataframe are made up of factors.
+
+11.
+```{r warning = FALSE, message = FALSE, error = TRUE}
+map(1:5, runif)
+map(-2:2, rnorm, n = 5)
+map_dbl(-2:2, rnorm, n = 5)
+```
+The last one gives the error: "Result 1 is not a length 1 atomic vector"
+
+#2 Chapter 28
+
+1. 
+```{r}
+ggplot(mpg) +
+  geom_point(aes(x = displ, y = hwy, color = trans)) +
+  labs(x = "displacement",
+       y = "highway miles per gallon",
+       color = "transmission",
+       title = "fuel efficiency",
+       subtitle = "mpg dataset",
+       caption = "data from year xxxx")
+```
+
+2.
+```{r}
+ggplot(mpg, aes(displ, hwy)) +
+  geom_point(aes(colour = class)) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs( x = "displacement",
+    y = "mpg",
+    colour = "type",
+    title = "fuel efficiency by car size",
+   caption = "data from year xxxx")
+```
+
+4. You can add text at any point in a plot. You only need to have the proper coordinates for where you want your text to be.
+```{r}
+ggplot(data = mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  annotate("text", x = 6, y = 40, label = "yesssss")
+```
+
+6. The four arguments for arrow within geom_segment are:
+
+angle : angle of arrow head  
+length : length of the arrow head 
+ends: ends of the line
+type: whether the arrow head is closed or open
+
+```{r}
+ggplot(mpg, aes(displ, hwy)) +
+  geom_point() + 
+  geom_segment(aes(x = 7, y = 30, xend = 5.5, yend = 6, colour = "segment"),
+               arrow = arrow(angle = 30, length = unit(0.5, "cm"),
+                             ends = "first", type = "open")
+               )
+```
+
+7.
+```{r}
+year <- make_date(seq(year(min(presidential$start)),
+                      year(max(presidential$end)),
+                      by = 4), 1, 1
+                  )
+
+presidential %>%
+  mutate(id = 33 + row_number(),
+         name_id = str_c(name, "-", id)) %>%
+  ggplot(aes(x = start, y = name_id, colour = party)) +
+  geom_point() +
+  geom_segment(aes(xend = end, yend = name_id)) +
+  scale_colour_manual(values = c(Republican = "red", Democratic = "blue")) +
+  scale_x_date(NULL, breaks = year, date_labels = "%Y") 
+
+```
+
+8.
+```{r}
+
+ggplot(diamonds, aes(carat, price)) +
+  geom_point(aes(colour = cut), alpha = 1/20) +
+   guides(colour = guide_legend(nrow = 1, override.aes = list(alpha = 1)))  
+
+```
+
+
+
+
+
+
+
+
